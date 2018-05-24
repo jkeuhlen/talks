@@ -3,6 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Arrows where
 
 import Data.Extensible.Sum
@@ -10,6 +11,7 @@ import Data.Extensible.Sum2
 import Data.Extensible.Product
 import Data.Text(Text)
 import Control.Arrow
+import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Control.Category as C
 import Control.Monad
@@ -88,7 +90,7 @@ cmplPrint2XToFile :: (MonadIO m) => Print2X a b -> FreeA (Kleisli m) a b
 cmplPrint2XToFile Screen2 = liftK (\x -> liftIO $ writeFile "output.txt" x)  
 
 
--- Sum Class information 
+-- Sum Class information/helper functions 
 liftL :: FreeA f a b -> FreeA (f :+: g) a b
 liftL = fmapEff InL
 
@@ -104,13 +106,52 @@ lftE :: (eff :>+: f)
   => f a b -> FreeA eff a b
 lftE = lftEff . effect
 
-fmapEff :: forall a b c eff1 eff2 . (forall bb cc . eff1 bb cc -> eff2 bb cc)
+fmapEff :: forall b c eff1 eff2 . (forall bb cc . eff1 bb cc -> eff2 bb cc)
   -> FreeA eff1 b c -> FreeA eff2 b c
 fmapEff fxn = go
   where
-    go :: FreeA eff1 a b -> FreeA eff2 a b 
+    go :: forall b c . FreeA eff1 b c -> FreeA eff2 b c 
     go (Effect eff) = effect $ fxn eff 
-    go x = x 
-    -- alg :: SArrow a eff1 (FreeA eff2) b' c' -> FreeA eff2 b' c'
-    -- alg (Effect eff) = effect $ fxn eff
-    -- alg x = recombineWTagA x
+    go (Pure x) = Pure x 
+    go (Seq f1 f2) = go f2 C.. go f1
+    go (Par f1 f2) = go f1 *** go f2    
+
+compileA :: forall b c eff1 eff2 . (forall bb cc . eff1 bb cc -> FreeA eff2 bb cc)
+  -> FreeA eff1 b c -> FreeA eff2 b c
+compileA fxn = go
+  where
+    go :: forall b c . FreeA eff1 b c -> FreeA eff2 b c 
+    go (Effect eff) = fxn eff 
+    go (Pure x) = Pure x 
+    go (Seq f1 f2) = go f2 C.. go f1
+    go (Par f1 f2) = go f1 *** go f2
+
+
+(<#>) ::
+     (forall a' b' . f a' b' -> FreeA h a' b')
+  -> (forall a' b' . g a' b' -> FreeA h a' b' )
+  -> (f :+: g) a b
+  -> FreeA h a b
+(<#>) f2hA _ (InL x) = f2hA x
+(<#>) _ g2hA (InR x) = g2hA x
+
+(#>>) :: 
+     (forall a' b' . f a' b' -> FreeA g a' b')
+  -> (forall a' b' . g a' b' -> FreeA h a' b' )
+  -> f a b
+  -> FreeA h a b
+(#>>) f2gA g2hA x = compileA g2hA $ f2gA x
+
+-- | Example arrows 
+
+extensibleArrow :: (eff :>+: PrintX, eff :>+: Print2X) => FreeA eff Text ()
+extensibleArrow = proc x -> do 
+  print1 -< x 
+  print2 -< T.unpack x 
+  Pure id -< ()
+
+print1 :: (eff :>+: PrintX) => FreeA eff Text ()
+print1 = lftE Screen 
+
+print2 :: (eff :>+: Print2X) => FreeA eff String ()
+print2 = lftE Screen2

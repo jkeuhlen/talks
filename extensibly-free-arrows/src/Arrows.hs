@@ -39,8 +39,8 @@ instance Arrow (FreeA eff) where
     second f = Par C.id f
     (***) = Par
 
-evalA :: forall eff arr a0 b0. (Arrow arr) => (forall a b. eff a b -> arr a b) -> FreeA eff a0 b0 -> arr a0 b0
-evalA exec = go
+compileA :: forall eff arr a0 b0. (Arrow arr) => (forall a b. eff a b -> arr a b) -> FreeA eff a0 b0 -> arr a0 b0
+compileA exec = go
   where
     go :: forall a b . (Arrow arr) => FreeA eff a b -> arr a b
     go freeA = case freeA of
@@ -107,9 +107,9 @@ fmapEff fxn = go
     go (Seq f1 f2) = go f2 C.. go f1
     go (Par f1 f2) = go f1 *** go f2    
 
-compileA :: forall b c eff1 eff2 . (forall bb cc . eff1 bb cc -> FreeA eff2 bb cc)
+lftEffA :: forall b c eff1 eff2 . (forall bb cc . eff1 bb cc -> FreeA eff2 bb cc)
   -> FreeA eff1 b c -> FreeA eff2 b c
-compileA fxn = go
+lftEffA fxn = go
   where
     go :: forall b c . FreeA eff1 b c -> FreeA eff2 b c 
     go (Effect eff) = fxn eff 
@@ -131,7 +131,7 @@ compileA fxn = go
   -> (forall a' b' . g a' b' -> FreeA h a' b' )
   -> f a b
   -> FreeA h a b
-(#>>) f2gA g2hA x = compileA g2hA $ f2gA x
+(#>>) f2gA g2hA x = lftEffA g2hA $ f2gA x
 
 -- | Example arrows 
 

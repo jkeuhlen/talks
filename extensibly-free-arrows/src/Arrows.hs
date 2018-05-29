@@ -1,9 +1,9 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Arrows where
 
 import Data.Extensible.Sum
@@ -28,9 +28,6 @@ data FreeA eff a b where
     -- Apply -- | Arrow apply 
     -- FanIn -- | Arrow Choice
     -- Spl   -- | Arrow Choice
-
-effect :: eff a b -> FreeA eff a b
-effect = Effect
 
 instance C.Category (FreeA eff) where
     id = Pure id
@@ -68,7 +65,7 @@ evalKleisliA = go
 
 
 liftK :: Monad m => (b -> m c) -> FreeA (Kleisli m) b c
-liftK eff = effect (Kleisli $ \x -> eff x)
+liftK eff = Effect (Kleisli $ \x -> eff x)
 
 -- Free effects
 data PrintX a b where 
@@ -91,27 +88,21 @@ cmplPrint2XToFile Screen2 = liftK (\x -> liftIO $ writeFile "output.txt" x)
 
 
 -- Sum Class information/helper functions 
-liftL :: FreeA f a b -> FreeA (f :+: g) a b
-liftL = fmapEff InL
-
-liftR :: FreeA g a b -> FreeA (f :+: g) a b
-liftR = fmapEff InR
-
-lftEff :: (Sum2 eff f) 
+lftEff :: (eff :>+: f) 
   => FreeA f a b 
   -> FreeA eff a b
 lftEff = fmapEff lft2
 
 lftE :: (eff :>+: f)
   => f a b -> FreeA eff a b
-lftE = lftEff . effect
+lftE = lftEff . Effect
 
 fmapEff :: forall b c eff1 eff2 . (forall bb cc . eff1 bb cc -> eff2 bb cc)
   -> FreeA eff1 b c -> FreeA eff2 b c
 fmapEff fxn = go
   where
     go :: forall b c . FreeA eff1 b c -> FreeA eff2 b c 
-    go (Effect eff) = effect $ fxn eff 
+    go (Effect eff) = Effect $ fxn eff 
     go (Pure x) = Pure x 
     go (Seq f1 f2) = go f2 C.. go f1
     go (Par f1 f2) = go f1 *** go f2    

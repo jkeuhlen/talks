@@ -11,9 +11,9 @@ main = do
   putStrLn "Pick a way to run this program [1|2|*]"
   i <- getLine 
   case i of 
-    "1" -> runKleisli (evalKleisliA $ evalA cmplPrintX $ effect Screen >>> Pure (const "foo") >>> effect Screen) ("'ello World!" :: Text)
+    "1" -> runKleisli (evalKleisliA $ evalA cmplPrintX $ Effect Screen >>> Pure (const "foo") >>> Effect Screen) ("'ello World!" :: Text)
     "2" -> runKleisli (evalKleisliA $ evalA (cmplPrintX <#> cmplPrint2XToFile) extensibleArrow) ("Extensible Arrow" :: Text)
-    _   -> runKleisli (evalKleisliA $ evalA cmplPrintXToFile $ effect Screen) ("'ello File!" :: Text)
+    _   -> runKleisli (evalKleisliA $ evalA cmplPrintXToFile $ Effect Screen) ("'ello File!" :: Text)
 
 
 

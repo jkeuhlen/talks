@@ -69,22 +69,22 @@ liftK eff = Effect (Kleisli $ \x -> eff x)
 
 -- Free effects
 data PrintX a b where 
-  Screen :: PrintX Text () 
+  Print :: PrintX Text () 
 
 cmplPrintX :: (MonadIO m) => PrintX a b -> FreeA (Kleisli m) a b 
-cmplPrintX Screen = liftK (\x -> liftIO $ T.putStrLn x)
+cmplPrintX Print = liftK (\x -> liftIO $ T.putStrLn x)
 
 cmplPrintXToFile :: (MonadIO m) => PrintX a b -> FreeA (Kleisli m) a b 
-cmplPrintXToFile Screen = liftK (\x -> liftIO $ T.writeFile "output.txt" x)
+cmplPrintXToFile Print = liftK (\x -> liftIO $ T.writeFile "output.txt" x)
 
-data Print2X a b where 
-  Screen2 :: Print2X String ()
+data StoreX a b where 
+  Store :: StoreX String ()
 
-cmplPrint2X :: (MonadIO m) => Print2X a b -> FreeA (Kleisli m) a b 
-cmplPrint2X Screen2 = liftK (\x -> liftIO $ putStrLn x)
+cmplStoreX :: (MonadIO m) => StoreX a b -> FreeA (Kleisli m) a b 
+cmplStoreX Store = liftK (\x -> liftIO $ putStrLn x)
 
-cmplPrint2XToFile :: (MonadIO m) => Print2X a b -> FreeA (Kleisli m) a b 
-cmplPrint2XToFile Screen2 = liftK (\x -> liftIO $ writeFile "output.txt" x)  
+cmplStoreXToFile :: (MonadIO m) => StoreX a b -> FreeA (Kleisli m) a b 
+cmplStoreXToFile Store = liftK (\x -> liftIO $ writeFile "output.txt" x)  
 
 
 -- Sum Class information/helper functions 
@@ -135,14 +135,14 @@ lftEffA fxn = go
 
 -- | Example arrows 
 
-extensibleArrow :: (eff :>+: PrintX, eff :>+: Print2X) => FreeA eff Text ()
+extensibleArrow :: (eff :>+: PrintX, eff :>+: StoreX) => FreeA eff Text ()
 extensibleArrow = proc x -> do 
-  print1 -< x 
-  print2 -< T.unpack x 
+  printA -< x 
+  storeA -< T.unpack x 
   Pure id -< ()
 
-print1 :: (eff :>+: PrintX) => FreeA eff Text ()
-print1 = lftE Screen 
+printA :: (eff :>+: PrintX) => FreeA eff Text ()
+printA = lftE Print 
 
-print2 :: (eff :>+: Print2X) => FreeA eff String ()
-print2 = lftE Screen2
+storeA :: (eff :>+: StoreX) => FreeA eff String ()
+storeA = lftE Store

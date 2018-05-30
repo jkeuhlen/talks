@@ -67,25 +67,6 @@ evalKleisliA = go
 liftK :: Monad m => (b -> m c) -> FreeA (Kleisli m) b c
 liftK eff = Effect (Kleisli $ \x -> eff x)
 
--- Free effects
-data PrintX a b where 
-  Print :: PrintX Text () 
-
-cmplPrintX :: (MonadIO m) => PrintX a b -> FreeA (Kleisli m) a b 
-cmplPrintX Print = liftK (\x -> liftIO $ T.putStrLn x)
-
-cmplPrintXToFile :: (MonadIO m) => PrintX a b -> FreeA (Kleisli m) a b 
-cmplPrintXToFile Print = liftK (\x -> liftIO $ T.writeFile "output.txt" x)
-
-data StoreX a b where 
-  Store :: StoreX String ()
-
-cmplStoreX :: (MonadIO m) => StoreX a b -> FreeA (Kleisli m) a b 
-cmplStoreX Store = liftK (\x -> liftIO $ putStrLn x)
-
-cmplStoreXToFile :: (MonadIO m) => StoreX a b -> FreeA (Kleisli m) a b 
-cmplStoreXToFile Store = liftK (\x -> liftIO $ writeFile "output.txt" x)  
-
 
 -- Sum Class information/helper functions 
 lftEff :: (eff :>+: f) 
@@ -132,6 +113,26 @@ lftEffA fxn = go
   -> f a b
   -> FreeA h a b
 (#>>) f2gA g2hA x = lftEffA g2hA $ f2gA x
+
+
+-- Free effects
+data PrintX a b where 
+  Print :: PrintX Text () 
+
+interpPrintX :: (MonadIO m) => PrintX a b -> FreeA (Kleisli m) a b 
+interpPrintX Print = liftK (\x -> liftIO $ T.putStrLn x)
+
+interpPrintXToFile :: (MonadIO m) => PrintX a b -> FreeA (Kleisli m) a b 
+interpPrintXToFile Print = liftK (\x -> liftIO $ T.writeFile "output.txt" x)
+
+data StoreX a b where 
+  Store :: StoreX String ()
+
+interpStoreX :: (MonadIO m) => StoreX a b -> FreeA (Kleisli m) a b 
+interpStoreX Store = liftK (\x -> liftIO $ putStrLn x)
+
+interpStoreXToFile :: (MonadIO m) => StoreX a b -> FreeA (Kleisli m) a b 
+interpStoreXToFile Store = liftK (\x -> liftIO $ writeFile "output.txt" x)  
 
 -- | Example arrows 
 
